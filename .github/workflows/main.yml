@@ -41,7 +41,7 @@ jobs:
             git make autoconf automake libtool \
             flex bison perl gettext pkg-config \
             python3 python3-mako python3-pip \
-            meson ninja-build \
+            meson ninja-build glslang-tools \
             libasound2-dev libdbus-1-dev \
             libfontconfig-dev libfreetype-dev \
             libgl1-mesa-dev libgnutls28-dev \
