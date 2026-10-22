@@ -3,8 +3,16 @@ name: Build Wine-UWP
 on:
   workflow_dispatch:
   push:
+    branches:
+      - master
     paths:
-      - ".github/workflows/build.yml"
+      - ".github/workflows/main.yml"
+      - "build.sh"
+      - "conf.sh"
+      - "configure"
+      - "configure.ac"
+      - "**/*.c"
+      - "**/*.h"
 
 permissions:
   contents: read
@@ -25,7 +33,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y \
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             build-essential gcc-multilib g++-multilib \
             gcc-mingw-w64-x86-64 gcc-mingw-w64-i686 \
             clang lld llvm ccache \
@@ -51,8 +59,8 @@ jobs:
 
       - name: Configure Wine-UWP
         run: |
-         chmod +x conf.sh build.sh
-         ./conf.sh
+          chmod +x conf.sh build.sh
+          ./conf.sh
 
       - name: Build Wine-UWP
         run: |
@@ -61,23 +69,38 @@ jobs:
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
 
-      - name: Package build and logs
+      - name: Prepare compiled binary archive
+        if: success()
+        run: |
+          mkdir -p artifacts
+          tar -czf artifacts/wine-uwp-linux.tar.gz \
+            -C build \
+            64 \
+            32
+          ls -lh artifacts
+
+      - name: Upload compiled binary as workflow artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-uwp-linux-binaries
+          path: artifacts/wine-uwp-linux.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Package logs
         if: always()
         run: |
           mkdir -p output
-          tar -czf output/wine-uwp-build.tar.gz \
-            build conf.sh build.sh conf_dxvk.sh pfx.sh \
-            README-uwp.md 2>output/package.log \
-            || true
           tar -czf output/build-logs.tar.gz \
             build/64/config.log build/32/config.log \
             2>/dev/null || true
 
-      - name: Upload build artifacts
+      - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: wine-uwp-linux-build
+          name: wine-uwp-build-logs
           path: output/
           if-no-files-found: warn
           retention-days: 7
